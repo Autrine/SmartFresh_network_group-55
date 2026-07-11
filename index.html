@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartFresh Dashboard</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    :root {
+      --bg:#f3f4ef; --panel:#f8f8f2; --card:#ffffff;
+      --primary:#36753a; --primary-2:#7fb071; --accent:#9fc595;
+      --soft:#dcd7af; --highlight:#eef3e2; --warn:#b68c3a;
+      --danger:#8b4b4b; --text:#243224; --muted:#667065;
+      --border:#d9dfcf; --shadow:0 10px 28px rgba(54,117,58,0.10); --radius:22px;
+    }
+    body { font-family:Arial,sans-serif; background:var(--bg); color:var(--text); padding:12px; }
+    .app { max-width:1400px; margin:auto; background:var(--panel); border:1px solid var(--border); border-radius:28px; overflow:hidden; box-shadow:var(--shadow); display:grid; grid-template-columns:260px 1fr; min-height:94vh; position:relative; }
+    .sidebar { background:linear-gradient(180deg,#36753a 0%,#7fb071 100%); color:white; padding:24px 18px; display:flex; flex-direction:column; justify-content:space-between; gap:24px; }
+    .brand h2 { font-size:24px; margin-bottom:6px; }
+    .brand p { font-size:13px; color:rgba(255,255,255,0.82); line-height:1.5; }
+    .nav { display:grid; gap:10px; margin-top:14px; }
+    .nav-item { display:block; padding:14px 16px; border-radius:16px; background:rgba(255,255,255,0.10); font-size:15px; color:white; text-decoration:none; }
+    .nav-item.active { background:rgba(255,255,255,0.22); font-weight:bold; }
+    .info-box { padding:16px; border-radius:18px; background:rgba(255,255,255,0.14); font-size:14px; line-height:1.7; }
+    .status-dot { display:inline-block; width:10px; height:10px; border-radius:50%; background:#ccc; margin-right:6px; vertical-align:middle; }
+    .status-dot.connected { background:#4cff72; }
+    .status-dot.scanning  { background:#ffcc00; }
+    .status-dot.error     { background:#ff4444; }
+    .main { padding:24px; min-width:0; }
+    .mobile-top { display:none; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; background:white; border:1px solid var(--border); border-radius:18px; padding:14px 16px; box-shadow:var(--shadow); }
+    .mobile-brand { font-weight:bold; font-size:18px; color:var(--primary); }
+    .menu-btn { border:none; background:var(--primary); color:white; border-radius:12px; padding:10px 14px; font-size:18px; cursor:pointer; }
+    .topbar { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+    .topbar h1 { font-size:34px; margin-bottom:6px; }
+    .topbar p { color:var(--muted); line-height:1.5; max-width:720px; }
+    .btn-group { display:flex; gap:10px; flex-wrap:wrap; }
+    .top-btn { border:none; background:var(--primary); color:white; padding:13px 16px; border-radius:14px; cursor:pointer; font-weight:bold; font-size:14px; transition:0.2s ease; }
+    .top-btn:hover { background:var(--primary-2); }
+    .top-btn:disabled { background:#aaa; cursor:not-allowed; }
+    .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:16px; }
+    .grid-main { display:grid; grid-template-columns:1.1fr 0.9fr; gap:16px; margin-bottom:16px; }
+    .stack { display:grid; gap:16px; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .bottom-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); min-width:0; }
+    .label { font-size:14px; color:var(--muted); margin-bottom:8px; }
+    .value { font-size:32px; font-weight:bold; margin-bottom:8px; word-break:break-word; }
+    .small-note { font-size:14px; color:var(--muted); line-height:1.5; }
+    .prediction-card { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
+    .prediction-title { font-size:28px; font-weight:bold; margin-bottom:8px; text-transform:capitalize; }
+    .ring { width:92px; height:92px; border-radius:50%; display:grid; place-items:center; background:conic-gradient(var(--primary) 0deg,var(--primary) 180deg,#dfe8d8 180deg 360deg); flex-shrink:0; }
+    .ring-inner { width:68px; height:68px; border-radius:50%; background:white; display:grid; place-items:center; font-weight:bold; color:var(--primary); font-size:15px; }
+    .badge { display:inline-block; margin-top:12px; padding:9px 16px; border-radius:999px; background:#dcead3; color:#2f5f31; font-weight:bold; font-size:14px; }
+    .badge.warn { background:#ece5bd; color:#7a6431; }
+    .badge.bad  { background:#ead6d6; color:#7f4040; }
+    .image-card img { width:100%; height:320px; object-fit:cover; border-radius:18px; border:1px solid var(--border); background:var(--highlight); display:block; }
+    .metrics { display:grid; gap:12px; }
+    .metric { display:flex; justify-content:space-between; align-items:center; gap:10px; background:var(--highlight); border:1px solid var(--border); padding:14px 16px; border-radius:16px; flex-wrap:wrap; }
+    .metric span { color:var(--muted); font-size:14px; }
+    .metric strong { font-size:15px; word-break:break-word; }
+    .action-card { background:linear-gradient(135deg,#36753a 0%,#7fb071 100%); color:white; }
+    .action-card h3 { font-size:28px; margin-bottom:10px; }
+    .action-card p { color:rgba(255,255,255,0.90); line-height:1.6; margin-bottom:14px; }
+    .action-box { background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.18); padding:14px 16px; border-radius:16px; line-height:1.5; }
+
+    /* SMS Alert Log */
+    .alert-log { display:grid; gap:10px; max-height:220px; overflow-y:auto; }
+    .alert-item { padding:12px 16px; border-radius:14px; font-size:14px; line-height:1.5; border:1px solid var(--border); }
+    .alert-item.fresh  { background:#dcead3; border-color:#a8d09a; color:#2f5f31; }
+    .alert-item.raw    { background:#ece5bd; border-color:#d4c47a; color:#7a6431; }
+    .alert-item.spoilt { background:#ead6d6; border-color:#d09a9a; color:#7f4040; }
+    .alert-time { font-size:12px; opacity:0.7; margin-top:4px; }
+
+    /* SMS status toast */
+    .toast { position:fixed; bottom:24px; right:24px; background:#243224; color:white; padding:14px 20px; border-radius:16px; font-size:14px; z-index:9999; opacity:0; transition:opacity 0.3s; pointer-events:none; max-width:320px; }
+    .toast.show { opacity:1; }
+
+    .overlay { display:none; }
+    @media (max-width:1100px) {
+      .app { grid-template-columns:1fr; }
+      .grid-main { grid-template-columns:1fr; }
+      .sidebar { display:none; }
+      .sidebar.mobile-open { display:flex; position:fixed; top:0; left:0; width:82%; max-width:300px; height:100vh; z-index:1000; border-radius:0; padding-top:28px; }
+      .overlay.show { display:block; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:999; }
+      .mobile-top { display:flex; }
+    }
+    @media (max-width:768px) {
+      body { padding:8px; } .main { padding:16px; } .topbar h1 { font-size:28px; }
+      .grid-3,.grid-2,.bottom-grid { grid-template-columns:1fr; }
+      .image-card img { height:220px; } .value { font-size:28px; } .prediction-title { font-size:24px; }
+      .btn-group { width:100%; display:grid; grid-template-columns:1fr; } .top-btn { width:100%; } .card { padding:16px; }
+    }
+    @media (max-width:480px) {
+      .mobile-brand { font-size:16px; } .topbar h1 { font-size:24px; } .image-card img { height:190px; } .value { font-size:24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toast"></div>
+  <div class="overlay" id="overlay"></div>
+
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div>
+        <div class="brand">
+          <h2>SmartFresh</h2>
+          <p>Helping vendors check tomato condition using a camera and sensor readings.</p>
+        </div>
+        <div class="nav">
+          <a href="#dashboard" class="nav-item active">Dashboard</a>
+          <a href="#live" class="nav-item">Live View</a>
+          <a href="#results" class="nav-item">Tomato Results</a>
+          <a href="#reports" class="nav-item">Reports</a>
+          <a href="#alerts" class="nav-item">Alerts</a>
+        </div>
+      </div>
+      <div class="info-box">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Connecting...</span><br><br>
+        <strong>Camera:</strong> Captures tomato image<br>
+        <strong>Sensor:</strong> Reads temperature and humidity<br>
+        <strong>Use:</strong> Helps decide whether to sell, wait or remove tomatoes
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="mobile-top">
+        <div class="mobile-brand">SmartFresh</div>
+        <button class="menu-btn" id="menuBtn">☰</button>
+      </div>
+
+      <div class="topbar">
+        <div>
+          <h1>Dashboard</h1>
+          <p>Check tomato condition, storage environment and selling advice in one place.</p>
+        </div>
+        <div class="btn-group">
+          <button class="top-btn" id="captureBtn">Capture Image</button>
+          <button class="top-btn" id="refreshBtn">Refresh Data</button>
+          <button class="top-btn" id="demoBtn">Demo Data</button>
+        </div>
+      </div>
+
+      <section id="dashboard" class="grid-3">
+        <div class="card">
+          <div class="label">Temperature</div>
+          <div class="value" id="tempValue">--°C</div>
+          <div class="small-note">Current temperature reading</div>
+        </div>
+        <div class="card">
+          <div class="label">Humidity</div>
+          <div class="value" id="humidityValue">--%</div>
+          <div class="small-note">Current humidity reading</div>
+        </div>
+        <div class="card">
+          <div class="label">Result Accuracy</div>
+          <div class="value" id="resultConfidence">--</div>
+          <div class="small-note">How sure the system is about the result</div>
+        </div>
+      </section>
+
+      <section id="live" class="grid-main">
+        <div class="stack">
+          <div class="card prediction-card">
+            <div>
+              <div class="label">Tomato Condition</div>
+              <div class="prediction-title" id="statusValue">Waiting...</div>
+              <div class="small-note" id="confidenceValue">No result yet</div>
+            </div>
+            <div class="ring" id="progressRing">
+              <div class="ring-inner" id="ringText">--</div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="card">
+              <div class="label">Last Capture Time</div>
+              <div class="value" style="font-size:24px;" id="captureTime">Captured at --</div>
+              <span class="badge" id="badgeStatus">Waiting...</span>
+            </div>
+            <div class="card">
+              <div class="label">Estimated Shelf Life</div>
+              <div class="value" style="font-size:24px;" id="shelfLife">--</div>
+              <div class="small-note">Estimated remaining time before spoilage</div>
+            </div>
+          </div>
+
+          <div class="card action-card" id="alerts">
+            <h3>Recommended Action</h3>
+            <p>This suggestion helps the vendor know what to do next.</p>
+            <div class="action-box" id="actionText">Waiting...</div>
+          </div>
+        </div>
+
+        <div class="stack">
+          <div class="card image-card">
+            <div class="label">Tomato Image</div>
+            <img id="tomatoImage" src="fresh01_1776067183717.jpg" alt="Tomato image">
+            <div class="small-note" style="margin-top:12px;">Latest captured tomato image</div>
+          </div>
+
+          <div class="card metrics" id="reports">
+            <div class="metric">
+              <span>Current Result</span>
+              <strong id="metricStatus">Waiting...</strong>
+            </div>
+            <div class="metric">
+              <span>Confidence</span>
+              <strong id="metricConfidence">--</strong>
+            </div>
+            <div class="metric">
+              <span>Condition Level</span>
+              <strong id="systemCondition">Waiting...</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SMS Alert Log -->
+      <section id="results" style="margin-bottom:16px;">
+        <div class="card">
+          <div class="label" style="margin-bottom:14px;">📱 SMS Alert Log</div>
+          <div class="alert-log" id="alertLog">
+            <div class="alert-item" style="color:var(--muted);">No alerts sent yet. Press Capture Image to start.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bottom-grid">
+        <div class="card">
+          <div class="label">Why This Helps</div>
+          <div class="small-note">SmartFresh helps vendors know whether tomatoes are fresh, raw or spoilt — reducing losses in the market.</div>
+        </div>
+        <div class="card">
+          <div class="label">Main Goal</div>
+          <div class="small-note">Reduce tomato losses and support better selling decisions using AI and IoT technology.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    // ── Firebase config ───────────────────────────────────────────────────────
+    const firebaseConfig = {
+      apiKey:            "AIzaSyC-2ZDwV9atllW37ptaCg61BvhQEV_31Tg",
+      authDomain:        "sfresh-3e57d.firebaseapp.com",
+      databaseURL:       "https://sfresh-3e57d-default-rtdb.firebaseio.com",
+      projectId:         "sfresh-3e57d",
+      storageBucket:     "sfresh-3e57d.firebasestorage.app",
+      messagingSenderId: "228353055492",
+      appId:             "1:228353055492:web:fefed321949159c792ce51"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+
+    const latestRef         = ref(db, "/latest");
+    const captureCommandRef = ref(db, "/command/capture");
+    const statusRef         = ref(db, "/status");
+
+    // ── Twilio SMS config — fill these in ─────────────────────────────────────
+    // IMPORTANT: Replace these with your actual Twilio credentials
+    // Do NOT share these publicly
+    const TWILIO_ACCOUNT_SID  = "ACf6e240dbd9e709a244601bd210ea96a6";   // e.g. ACxxxxxxxxxxxx
+    const TWILIO_AUTH_TOKEN   = "3H4ZCi9mhZsFpowmmVhUh1NF1C5NoSPPvH";     // your new auth token
+    const TWILIO_FROM_NUMBER  = "+18603511559";               // your Twilio number
+    const TWILIO_TO_NUMBER    = "+256766788991";          // e.g. +256xxxxxxxxx
+
+    // ── SMS messages per condition ────────────────────────────────────────────
+    const smsMessages = {
+      fresh:  "SmartFresh Alert: Tomatoes are FRESH and ready to sell. Shelf life 4-6 days. Continue selling.",
+      raw:    "SmartFresh Alert: Tomatoes are RAW and not yet ripe. Do not sell yet. Store and wait for them to ripen.",
+      spoilt: "SmartFresh Alert: URGENT - Tomatoes are SPOILT. Remove from sale immediately to avoid losses."
+    };
+
+    // ── Toast notification ────────────────────────────────────────────────────
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      toast.textContent = msg;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 4000);
+    }
+
+    // ── Send SMS via Twilio ───────────────────────────────────────────────────
+    async function sendSMS(label) {
+      const message = smsMessages[label.toLowerCase()] || "SmartFresh Alert: New tomato scan result: " + label;
+
+      try {
+        const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
+        const body = new URLSearchParams({
+          To:   TWILIO_TO_NUMBER,
+          From: TWILIO_FROM_NUMBER,
+          Body: message
+        });
+
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Authorization": "Basic " + btoa(TWILIO_ACCOUNT_SID + ":" + TWILIO_AUTH_TOKEN),
+            "Content-Type":  "application/x-www-form-urlencoded"
+          },
+          body: body.toString()
+        });
+
+        if (response.ok) {
+          console.log("[SMS] Sent successfully");
+          showToast("SMS sent to " + TWILIO_TO_NUMBER);
+          addAlertLog(label, message, true);
+        } else {
+          const err = await response.json();
+          console.error("[SMS] Failed:", err.message);
+          showToast("SMS failed: " + err.message);
+          addAlertLog(label, message, false);
+        }
+      } catch (error) {
+        console.error("[SMS] Error:", error);
+        showToast("SMS error. Check your Twilio credentials.");
+        addAlertLog(label, message, false);
+      }
+    }
+
+    // ── Add entry to alert log ────────────────────────────────────────────────
+    function addAlertLog(label, message, success) {
+      const log  = document.getElementById("alertLog");
+      const time = new Date().toLocaleString();
+      const l    = label.toLowerCase();
+
+      // Remove placeholder
+      const placeholder = log.querySelector("[style]");
+      if (placeholder) placeholder.remove();
+
+      const item = document.createElement("div");
+      item.className = "alert-item " + (l === "fresh" ? "fresh" : l === "raw" ? "raw" : "spoilt");
+      item.innerHTML = `
+        <strong>${success ? "✅ SMS Sent" : "❌ SMS Failed"} — ${label.toUpperCase()}</strong><br>
+        ${message}
+        <div class="alert-time">${time}</div>
+      `;
+
+      log.insertBefore(item, log.firstChild);
+    }
+
+    // ── Status dot ────────────────────────────────────────────────────────────
+    const statusDot  = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+
+    function setStatus(state) {
+      statusDot.className = "status-dot " + state;
+      if (state === "connected") statusText.textContent = "ESP32 Connected";
+      if (state === "scanning")  statusText.textContent = "Scanning tomato...";
+      if (state === "error")     statusText.textContent = "Error occurred";
+      if (state === "")          statusText.textContent = "Waiting for device...";
+    }
+
+    onValue(statusRef, (snap) => {
+      const s = snap.val();
+      if      (s === "ready")    setStatus("connected");
+      else if (s === "scanning") setStatus("scanning");
+      else if (s === "error")    setStatus("error");
+      else                       setStatus("");
+    });
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function formatTime(ts) {
+      if (!ts) return "--";
+      return new Date(ts * 1000).toLocaleString();
+    }
+
+    function updateBadge(label) {
+      const badge = document.getElementById("badgeStatus");
+      const l = (label || "").toLowerCase();
+      badge.textContent = label || "Waiting...";
+      badge.className   = "badge";
+      if (l === "raw")    badge.classList.add("warn");
+      if (l === "spoilt") badge.classList.add("bad");
+    }
+
+    function updateRing(percent) {
+      const ring     = document.getElementById("progressRing");
+      const ringText = document.getElementById("ringText");
+      const angle    = Math.round((percent / 100) * 360);
+      ring.style.background = `conic-gradient(var(--primary) 0deg,var(--primary) ${angle}deg,#dfe8d8 ${angle}deg 360deg)`;
+      ringText.textContent  = percent + "%";
+    }
+
+    // ── Render data ───────────────────────────────────────────────────────────
+    let lastLabel = "";
+
+    function renderData(data) {
+      const label      = data.label          || "Unknown";
+      const confidence = parseFloat(data.confidence) || 0;
+      const temp       = data.temperature    != null ? data.temperature  : "--";
+      const hum        = data.humidity       != null ? data.humidity     : "--";
+      const shelfLife  = data.shelfLife      || "--";
+      const recommend  = data.recommendation || "--";
+      const condition  = data.conditionLevel || "--";
+      const ts         = data.timestamp      || null;
+      const percent    = Math.round(confidence);
+
+      document.getElementById("tempValue").textContent        = temp + "°C";
+      document.getElementById("humidityValue").textContent    = hum + "%";
+      document.getElementById("statusValue").textContent      = label;
+      document.getElementById("confidenceValue").textContent  = percent + "% sure";
+      document.getElementById("captureTime").textContent      = "Captured at " + formatTime(ts);
+      document.getElementById("resultConfidence").textContent = percent + "%";
+      document.getElementById("metricConfidence").textContent = percent + "%";
+      document.getElementById("metricStatus").textContent     = label;
+      document.getElementById("shelfLife").textContent        = shelfLife;
+      document.getElementById("actionText").textContent       = recommend;
+      document.getElementById("systemCondition").textContent  = condition;
+
+      updateBadge(label);
+      updateRing(percent);
+
+      // Send SMS only when label changes (not on every Firebase update)
+      if (label !== lastLabel && label !== "Unknown" && ts) {
+        lastLabel = label;
+        sendSMS(label);
+      }
+    }
+
+    // ── Live listener ─────────────────────────────────────────────────────────
+    onValue(latestRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) renderData(data);
+    });
+
+    // ── Capture button ────────────────────────────────────────────────────────
+    const captureBtn = document.getElementById("captureBtn");
+
+    async function sendCaptureCommand() {
+      captureBtn.disabled    = true;
+      captureBtn.textContent = "Sending...";
+      try {
+        await set(captureCommandRef, true);
+        captureBtn.textContent = "Waiting for ESP32...";
+        setTimeout(() => { captureBtn.disabled = false; captureBtn.textContent = "Capture Image"; }, 15000);
+      } catch (error) {
+        console.error(error);
+        alert("Failed to send capture command. Check your internet connection.");
+        captureBtn.disabled    = false;
+        captureBtn.textContent = "Capture Image";
+      }
+    }
+
+    // ── Refresh button ────────────────────────────────────────────────────────
+    async function refreshLatestData() {
+      try {
+        const snapshot = await get(latestRef);
+        if (snapshot.exists()) { renderData(snapshot.val()); }
+        else { alert("No data yet. Make sure the ESP32 is running and connected."); }
+      } catch (error) { console.error(error); alert("Failed to refresh data."); }
+    }
+
+    // ── Demo button ───────────────────────────────────────────────────────────
+    function loadDemoData() {
+      renderData({
+        temperature: 27, humidity: 68,
+        label: "fresh", confidence: 92,
+        shelfLife: "4-6 days",
+        recommendation: "Continue selling. Tomatoes are ripe and in good condition.",
+        conditionLevel: "Good",
+        timestamp: Math.floor(Date.now() / 1000)
+      });
+    }
+
+    captureBtn.addEventListener("click", sendCaptureCommand);
+    document.getElementById("refreshBtn").addEventListener("click", refreshLatestData);
+    document.getElementById("demoBtn").addEventListener("click", loadDemoData);
+
+    // ── Mobile menu ───────────────────────────────────────────────────────────
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("overlay");
+    document.getElementById("menuBtn").addEventListener("click", () => { sidebar.classList.toggle("mobile-open"); overlay.classList.toggle("show"); });
+    overlay.addEventListener("click", () => { sidebar.classList.remove("mobile-open"); overlay.classList.remove("show"); });
+    document.querySelectorAll(".nav-item").forEach(item => item.addEventListener("click", () => { sidebar.classList.remove("mobile-open"); overlay.classList.remove("show"); }));
+  </script>
+</body>
+</html>
